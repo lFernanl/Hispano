@@ -12,12 +12,11 @@ exports.commands = {
 			'<center><h3><b><u>Tienda del servidor</u></b></h3><table border="1" cellspacing="0" cellpadding="3" target="_blank"><tbody>' +
 			'<tr><th>Art&iacute;culo</th><th>Descripci&oacute;n</th><th>Coste</th></tr>' +
 			'<tr><td>Chatroom</td><td>Compra una Sala de chat. Será pública o privada en función del motivo de su compra. Si se detecta spam de comandos / saturación del modlog será borrada.</td><td>10000</td></tr>' +
-			'<tr><td>CustomTC</td><td>Compra una Tarjeta de Entrenador personalizada (a partir de código html). Contactar con un administrador si el código es muy largo para un solo mensaje.</td><td>8000</td></tr>' +
-			'<tr><td>CustomAvatar</td><td>Compra un avatar personalizado. Preferiblemente debe ser una imagen de pequeñas dimensiones y acorde a las reglas del servidor. Contactar con un Admin para obtener este art&iacute;culo.</td><td>6000</td></tr>' +
+			'<tr><td>TC</td><td>Compra una Tarjeta de Entrenador personalizada (a partir de código html). Contactar con un administrador si el código es muy largo para un solo mensaje.</td><td>8000</td></tr>' +
+			'<tr><td>Avatar</td><td>Compra un avatar personalizado. Preferiblemente debe ser una imagen de pequeñas dimensiones y acorde a las reglas del servidor. Contactar con un Admin para obtener este art&iacute;culo.</td><td>6400</td></tr>' +
 			'<tr><td>Symbol</td><td>Compra el acceso al comado /customsymbol que permite elegir un símbolo (excepto staff) para aparecer en lo alto de la lista de usuarios.</td><td>4000</td></tr>' +
-			'<tr><td>TC</td><td>Compra una Tarjeta de entrenador básica. Con una Imagen modificable con /tcimage y una frase de entrenador modificable con /tcphrase</td><td>3000</td></tr>' +
-			'<tr><td>Avatar</td><td>Si ya tienes un avatar personalizado. Puedes cambiarlo por otro diferente.</td><td>1000</td></tr>' +
-			'<tr><td>Sprite</td><td>Añade la imagen de un Pokemon a tu TC Básica. Máximo 6. Se pueden cambiar los pokemon con el comando /tcpokemon</td><td>100</td></tr>' +
+			'<tr><td>Arreglo de Avatar</td><td>Si ya tienes un avatar personalizado. Puedes cambiarlo por otro diferente.</td><td>1000</td></tr>' +
+			'<tr><td>Icono</td><td>Compra un icono de un pokemon al lado de tu nick para 3 salas. Debe ser una imagen 32x32. Contactar con un Admin para obtener este artículo.<br><b>OJO:Tu icono puede durar hasta 32 Horas en aparecer</td><td>2500</td></tr>' +
 			'</tbody></table><br /> Para comprar un artículo usa el comando /buy (artículo)' +
 			'<br /> Algunos artículos solo se pueden comprar contactando con un Administrador. Para más información usa /shophelp' +
 			'</center>'
@@ -64,7 +63,7 @@ exports.commands = {
 		if (!params) return this.sendReply("Usage: /buy object");
 		var article = toId(params[0]);
 		switch (article) {
-			case 'customtc':
+			case 'tc':
 				prize = 8000;
 				if (Shop.getUserMoney(user.name) < prize) return this.sendReply("No tienes suficiente dinero.");
 				var tcUser = Shop.getTrainerCard(user.name);
@@ -76,26 +75,6 @@ exports.commands = {
 				Shop.setCustomTrainerCard(user.name, true);
 				Shop.removeMoney(user.name, prize);
 				return this.sendReply("Has comprado una Tarjeta de entreador personalizada. Consulta /shophelp para más información.");
-				break;
-			case 'tc':
-				prize = 3000;
-				if (Shop.getUserMoney(user.name) < prize) return this.sendReply("No tienes suficiente dinero.");
-				var tcUser = Shop.getTrainerCard(user.name);
-				if (tcUser) return this.sendReply("Ya poseías este artículo.");
-				Shop.giveTrainerCard(user.name);
-				Shop.removeMoney(user.name, prize);
-				return this.sendReply("Has comprado una Tarjeta de Entrenador. Revisa /shophelp para saber como editarla.");
-				break;
-			case 'sprite':
-				prize = 100;
-				if (Shop.getUserMoney(user.name) < prize) return this.sendReply("No tienes suficiente dinero.");
-				var tcUser = Shop.getTrainerCard(user.name);
-				if (!tcUser) return this.sendReply("Necesitas comprar primero una Tarjeta de entrenador.");
-				if (tcUser.nPokemon > 5) return this.sendReply("Ya tienes 6 Pokemon para tu tarjeta de entrenador.");
-				if (tcUser.customTC) return this.sendReply("Tu tarjeta es Personalizada. Usa /tchtml pata modificarla.");
-				Shop.nPokemonTrainerCard(user.name, tcUser.nPokemon + 1);
-				Shop.removeMoney(user.name, prize);
-				return this.sendReply("Has comprado un Sprite de un pokemon para tu TC. Revisa /shophelp para más información.");
 				break;
 			case 'chatroom':
 				prize = 10000;
@@ -120,7 +99,7 @@ exports.commands = {
 				Shop.removeMoney(user.name, prize);
 				return this.sendReply("Has comprado el permiso para usar los comandos /customsymbol y /resetsymbol. Para más información consulta /shophelp.");
 				break;
-			case 'avatar':
+			case 'arreglodeavatar':
 				prize = 1000;
 				if (Shop.getUserMoney(user.name) < prize) return this.sendReply("No tienes suficiente dinero.");
 				if (!Config.customavatars[user.userid]) return this.sendReply("No tenías un avatar personalizado.");
@@ -130,8 +109,8 @@ exports.commands = {
 				Shop.removeMoney(user.name, prize);
 				return this.sendReply("Has solicitado un cambio de tu avatar personalizado. Espera a que un admin revise tu compra.");
 				break;
-			case 'customavatar':
-				prize = 6000;
+			case 'avatar':
+				prize = 6400;
 				if (Shop.getUserMoney(user.name) < prize) return this.sendReply("No tienes suficiente dinero.");
 				if (Config.customavatars[user.userid]) return this.sendReply("Ya habías comprado este artículo. Para cambiar tu avatar compra la opcion Avatar");
 				if (params.length !== 2) return this.sendReply("Usa el comando así: /buy avatar,[imagen]");

@@ -371,20 +371,20 @@ function clean(string) {
 var cmds = {
 	tourhelp: function(target, room, user) {
 		if (!this.canBroadcast()) return;
-		this.sendReplyBox('<font size = 2>Sistema de torneos  clásico</font><br />' +
-						'Sistema de torneos clásico. Disponible para las salas, permitiendo a los usuarios con auth (+ % @ # & ~) crearlos y moderarlos.<br />' +
+		this.sendReplyBox('<center><font size = 2><h3>Sistema de torneos</h3></font><br />' +
+						' Disponible para las salas, permitiendo a los usuarios con auth (+ % @ # & ~) crearlos y moderarlos.<br />' +
 						'Los comandos son:<br />' +
-						'<ul><li>/newtour [formato], [tiempo] minutes - Inicia un torneo. Requiere: + % @ & ~</li>' +
-						'<li>/j - Comando para unirse a los tourneos.</li>' +
+						'<ul><li>/newtour [Formato], [Tiempo] minutos - Inicia un torneo. Requiere: + % @ & ~</li>' +
+						'<li>/j - Comando para unirse a los torneos.</li>' +
 						'<li>/l - comando para abandonar un torneo.</li>' +
-						'<li>/remind - recuerda a los usuarios con batallas pendientes.</li>' +
+						'<li>/remind - recuerda a los usuarios inactivos que tienen batallas pendientes.</li>' +
 						'<li>/vr - muestra el estado del torneo.</li>' +
 						'<li>/fl [usuario] - Fuerza a un usuario a salir de un torneo en fase de entrada.</li>' +
 						'<li>/dq [usuario] - Descalifica a un usuario.</li>' +
-						'<li>/replace [usuario1], [usuario2] - Comando para reemplazar.</li>' +
+						'<li>/replace [usuario1], [usuario2] - reemplaza a un Usuario.</li>' +
 						'<li>/invalidate - Deniega la validez de una batalla.</li>' +
 						'<li>/endtour - Cancela el torneo.</li>' +
-						'</ul>');
+						'</ul></center>');
 	},
 	
 	createtour: 'newtour',
@@ -400,9 +400,9 @@ var cmds = {
 		if (tour[rid] && tour[rid].status != 0) return this.sendReply('Ya hay un torneo en curso.');
 		if (War.getTourData(room.id)) return this.sendReply("Ya había una guerra en esta sala.");
 		if (teamTour.getTourData(room.id)) return this.sendReply("Ya había un torneo de equipos en esta sala.");
-		if (!target) return this.sendReply('El comando correcto es: /newtour formato, tamano');
+		if (!target) return this.sendReply('El comando correcto es: /newtour formato, tiempo');
 		var targets = tour.splint(target);
-		if (targets.length != 2) return this.sendReply('El comando correcto es: /newtour formato, tamano');
+		if (targets.length != 2) return this.sendReply('El comando correcto es: /newtour formato, tiempo');
 		var tierMatch = false;
 		var tempTourTier = '';
 		for (var i = 0; i < tour.tiers.length; i++) {
@@ -426,10 +426,9 @@ var cmds = {
 		else {
 			targets[1] = parseInt(targets[1]);
 		}
-		if (isNaN(targets[1])) return this.sendReply('El comando correcto es: /newtour formato, tamano');
+		if (isNaN(targets[1])) return this.sendReply('El comando correcto es: /newtour formato, tiempo');
 		if (targets[1] < 3) return this.sendReply('Los torneos deben tener al menos 3 participantes.');
 
-		this.parse('/endpoll');
 		tour.reset(rid);
 		tour[rid].tier = tempTourTier;
 		tour[rid].size = targets[1];
@@ -558,6 +557,32 @@ var cmds = {
 			}
 		}
 	},
+
+	push: 'fj',
+	forcejoin: 'fj',
+	fj: function(target, room, user, connection) {
+		if (!tour.lowauth(user,room)) return this.sendReply('No tienes suficiente poder para utilizar este comando.');
+		if (room.decision) return this.sendReply('Prof. Oak: No es un buen momento para usar este comando. No puedes utilizarlo en salas de batalla.');
+		if (tour[room.id] == undefined || tour[room.id].status == 0 || tour[room.id].status == 2) return this.sendReply('No hay un torneo en su fase de inscripcion.');
+		if (!target) return this.sendReply('Especifica el usuario cuya participacion deseas.');
+		var targetUser = Users.get(target);
+		if (targetUser) {
+			target = targetUser.userid;
+		} else {
+			return this.sendReply('El usuario \'' + target + '\' no existe.');
+		}
+		if (tour.joinable(target, room.id)) {
+			tour.reportdue(room);
+			tour[room.id].players.push(target);
+			tour[room.id].playerslogged.push(target);
+			var remslots = tour[room.id].size - tour[room.id].players.length;
+			room.addRaw(user.name + ' ha forzado a <b>' + tour.username(target) + '</b> a unirse al torneo.' + tour.remsg(remslots));
+			if (tour[room.id].size == tour[room.id].players.length) tour.start(room.id);
+		} else {
+			return this.sendReply('El usuario especificado ya estaba en el torneo.');
+		}
+	},
+
 
 	forceleave: 'fl',
 	fl: function(target, room, user, connection) {
@@ -906,89 +931,6 @@ var cmds = {
 	},
 		*/
 
-	survey: function(target, room, user) {
-		if (!tour.lowauth(user,room)) return this.sendReply('No tienes suficiente poder para utilizar este comando.');
-		if (tour[room.id].question) return this.sendReply('Ya hay una encuesta en curso.');
-		var separacion = "&nbsp;&nbsp;";
-		var answers = tour.splint(target);
-		if (answers.length < 3) return this.sendReply('El comando correcto es /poll pregunta, opcion1, opcion2...');
-		var question = answers[0];
-		answers.splice(0, 1);
-		var answers = answers.join(',').toLowerCase().split(',');
-		tour[room.id].question = question;
-		tour[room.id].answerList = answers;
-		this.logModCommand(user.name + ' ha iniciado la encuesta "' + tour[room.id].question + '"');
-		var pollOptions = '';
-		for (var i = 0; i < tour[room.id].answerList.length; ++i) {
-			pollOptions += '<button name="send" value="/vote ' + tour[room.id].answerList[i] + '">' + tour[room.id].answerList[i] + '</button>' + separacion;
-		}
-		room.addRaw('<div class="infobox"><h2>' + tour[room.id].question + separacion + '<font color="green"><small>Para votar escribe /vote OPCION</small></font></h2><hr />' + pollOptions + '</div>');
-	},
-	
-	tiersurvey: function(target, room, user) {
-		this.parse('/survey Formato para el siguiente Torneo, ' + Object.keys(Tools.data.Formats).filter(function (f) {return Tools.data.Formats[f].effectType === 'Format'; }).join(", "));
-	},
-
-	votesurvey: function(target, room, user) {
-		var ips = JSON.stringify(user.ips);
-		if (!tour[room.id].question) return this.sendReply('No hay encuestas en curso.');
-		if (tour[room.id].answerList.indexOf(target.toLowerCase()) == -1) return this.sendReply('\'' + target + '\' no es una opcion en esta encuesta.');
-		tour[room.id].answers[ips] = target.toLowerCase();
-		return this.sendReply('Tu unico voto ahora es por ' + target + '.');
-	},
-
-	votessurvey: function(target, room, user) {
-		if (!this.canBroadcast()) return;
-		this.sendReply('Votos registrados: ' + Object.keys(tour[room.id].answers).length);
-	},
-
-	endsurvey: function(target, room, user) {
-		if (!tour.lowauth(user,room)) return this.sendReply('No tienes suficiente poder para utilizar este comando.');
-		if (!tour[room.id].question) return this.sendReply('No hay encuestas en curso en esta sala.');
-		var votes = Object.keys(tour[room.id].answers).length;
-		this.logModCommand(user.name + ' ha cancelado la encuesta.');
-		if (!votes) {
-			tour[room.id].question = undefined;
-			tour[room.id].answerList = new Array();
-			tour[room.id].answers = new Object();
-			return room.addRaw("<h3>La encuesta fue cancelada debido a que nadie ha participado hasta ahora.</h3>");
-		} else {
-			var options = new Object();
-			var obj = tour[room.id];
-			for (var i in obj.answerList) options[obj.answerList[i]] = 0;
-			for (var i in obj.answers) options[obj.answers[i]]++;
-			var sortable = new Array();
-			for (var i in options) sortable.push([i, options[i]]);
-			sortable.sort(function(a, b) {return a[1] - b[1]});
-			var html = "";
-			var topAnswer  = false;
-			for (var i = sortable.length - 1; i > -1; i--) {
-					var option = sortable[i][0];
-					var value = sortable[i][1];
-					if (!topAnswer) topAnswer = option;
-					if (value > 0) {
-						html += "&bull; " + option + " - " + Math.floor(value / votes * 100) + "% (" + value + ")<br />";
-					}
-			}
-			room.addRaw('<div class="infobox"><h2>Resultados de "' + obj.question + '"</h2><hr />' + html + '</div>');
-			tour[room.id].topOption = topAnswer;
-			tour[room.id].question = undefined;
-			tour[room.id].answerList = new Array();
-			tour[room.id].answers = new Object();
-		}
-	},
-
-	surveyremind: 'surveyr',
-	surveyr: function(target, room, user) {
-		var separacion = "&nbsp;&nbsp;";
-		if (!tour[room.id].question) return this.sendReply('No hay encuestas en curso.');
-		if (!this.canBroadcast()) return;
-		var pollOptions = '';
-		for (var i = 0; i < tour[room.id].answerList.length; ++i) {
-			pollOptions += '<button name="send" value="/vote ' + tour[room.id].answerList[i] + '">' + tour[room.id].answerList[i] + '</button>' + separacion;
-		}
-		this.sendReply('|raw|<div class="infobox"><h2>' + tour[room.id].question + separacion + '<font color="green"><small>Para votar escribe "/vote OPCION"</small></font></h2><hr />' + pollOptions + '</div>');
-	}
 };
 
 for (var i in cmds) CommandParser.commands[i] = cmds[i];
