@@ -24,6 +24,35 @@ exports.commands = {
 		connection.popup(buffer.join("\n\n"));
 	},*/
 	
+	masspm: 'pmall',
+	pmall: function (target, room, user) {
+		if (!this.can('pmall')) return false;
+		if (!target) return this.parse('/help pmall');
+
+		var pmName = ' InFo.PM [No Responder]';
+
+		for (var i in Users.users) {
+			var message = '|pm|' + pmName + '|' + Users.users[i].getIdentity() + '|' + target;
+			Users.users[i].send(message);
+		}
+	},
+	pmallhelp: ["/pmall [message] - Envia un MP a todos en el Server"],
+
+	staffpm: 'pmallstaff',
+	pmstaff: 'pmallstaff',
+	pmallstaff: function (target, room, user) {
+		if (!this.can('forcewin')) return false;
+		if (!target) return this.parse('/help pmallstaff');
+
+		var pmName = ' InFo.Staff [No Responder]';
+
+		for (var i in Users.users) {
+			if (Users.users[i].isStaff) {
+				Users.users[i].send('|pm|' + pmName + '|' + Users.users[i].group + Users.users[i].name + '|' + target);
+			}
+		}
+	},
+	
 	postimage: 'image',
 	image: function (target, room, user) {
 		if (!target) return this.sendReply('Usage: /image link, size');
